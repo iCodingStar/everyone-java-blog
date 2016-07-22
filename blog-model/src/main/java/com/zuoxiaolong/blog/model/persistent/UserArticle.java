@@ -2,6 +2,8 @@ package com.zuoxiaolong.blog.model.persistent;
 
 import lombok.Data;
 
+import java.util.Date;
+
 @Data
 public class UserArticle extends BaseModel {
 
@@ -15,6 +17,10 @@ public class UserArticle extends BaseModel {
 
     private Integer categoryId;
 
+    private Integer isMainPage;
+
+    private Integer status;
+
     private String title;
 
     private String content;
@@ -23,10 +29,8 @@ public class UserArticle extends BaseModel {
 
     private Integer thumbupTimes;
 
-    private Integer isMainPage;
-
-    private Integer status;
-
     private Integer commentTimes;// 评论次数
+
+    private Date publishTime;
 
 }

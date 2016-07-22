@@ -32,7 +32,9 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
 
 /**
  * @author DeserveL
@@ -62,20 +64,23 @@ public class ArticleServiceImpl implements ArticleService {
     @Autowired
     private WebUserMapper webUserMapper;
 
+    @Autowired
+    private ArticleThumbupMapper articleThumbupMapper;
+
     /**
      * 查询文章详细信息
      *
-     * @param articleid
+     * @param articleId
      * @return
      */
     @Override
-    public ArticleInfoDTO getArticleInfo(Integer articleid) {
-        ValidateUtils.required(articleid);
+    public ArticleInfoDTO getArticleInfo(Integer articleId) {
+        ValidateUtils.required(articleId);
 
         //根据文章id获取文章的基本信息
-        UserArticle userArticle = userArticleMapper.selectByPrimaryKey(articleid);
+        UserArticle userArticle = userArticleMapper.selectByPrimaryKey(articleId);
         if(ObjectUtils.isEmpty(userArticle)){
-            logger.error("文章：{} 不存在！", articleid);
+            logger.error("文章：{} 不存在！", articleId);
             throw new BusinessException(ExceptionType.DATA_NOT_FOUND);
         }else {
             //获取文章的用户信息
@@ -114,7 +119,7 @@ public class ArticleServiceImpl implements ArticleService {
             articleInfoDTO.setUserArticle(userArticle);
 
             //增加一次阅读量
-            userArticleMapper.updateReadTimes(articleid);
+            userArticleMapper.updateReadTimes(articleId);
 
             return articleInfoDTO;
         }
@@ -123,14 +128,14 @@ public class ArticleServiceImpl implements ArticleService {
     /**
      * 查看评论和每条评论前三条回复列表
      *
-     * @param articleid 文章id
+     * @param articleId 文章id
      * @param offset 分页开始头评论id
      * @param size 每次加载数
      * @return
      */
     @Override
-    public List<ArticleCommentAndReplyDTO> getCommentInfo(Integer articleid,Integer offset, Integer size) {
-        ValidateUtils.required(articleid);
+    public List<ArticleCommentAndReplyDTO> getCommentInfo(Integer articleId,Integer offset, Integer size) {
+        ValidateUtils.required(articleId);
 
         //分页数据设置
         DropDownPage page = new DropDownPage();
@@ -145,7 +150,7 @@ public class ArticleServiceImpl implements ArticleService {
         page.setOrderType("ASC"); //升序排列
 
         //获取主评论
-        List<ArticleComment> articleCommentList = articleCommentMapper.getCommentByArticleID(page,articleid);
+        List<ArticleComment> articleCommentList = articleCommentMapper.getCommentByArticleID(page,articleId);
 
         //用于返回数据
         List<ArticleCommentAndReplyDTO> articleCommentAndReplyList = new ArrayList<>();
@@ -289,31 +294,54 @@ public class ArticleServiceImpl implements ArticleService {
     /**
      * 添加一次点赞
      *
-     * @param articleid
+     * @param articleId
+     * @param ipAddress
      * @return
      */
     @Override
-    public boolean updateThumbupTimes(Integer articleid) {
-        ValidateUtils.required(articleid);
+    public boolean updateThumbupTimes(Integer articleId,String ipAddress) {
+        ValidateUtils.required(articleId);
+        ValidateUtils.required(ipAddress);
 
-        int record = userArticleMapper.updateThumbupTimes(articleid);
-        return record>0?true:false;
+        //查询点赞信息表
+        ArticleThumbup articleThumbup = articleThumbupMapper.selectByArticleIdAndKey(articleId, ipAddress);
+        if(ObjectUtils.isEmpty(articleThumbup)){
+            articleThumbup = new ArticleThumbup();
+            articleThumbup.setArticleId(articleId);
+            articleThumbup.setIpAddress(ipAddress);
+            articleThumbupMapper.insertSelective(articleThumbup);
+            int record = userArticleMapper.updateThumbupTimes(articleId);
+            return record>0?true:false;
+        }else{
+            throw new BusinessException(ExceptionType.ARTICLE_THUMBUP_ERROR);
+        }
     }
 
     @Override
     public int insertUserArticle(UserArticle userArticle) {
+        ValidateUtils.required(userArticle.getWebUserId());
+        ValidateUtils.required(userArticle.getCategoryId());
+        ValidateUtils.required(userArticle.getTitle());
+        ValidateUtils.required(userArticle.getIsMainPage());
         userArticleMapper.insertSelective(userArticle);
         return userArticle.getId();
     }
 
     @Override
     public void updateUserArticle(UserArticle userArticle) {
+        ValidateUtils.required(userArticle.getId());
+        if (userArticle.getPublishTime() != null) {
+            throw new BusinessException(ExceptionType.PARAMETER_ILLEGAL);
+        }
+        if (!ObjectUtils.isEmpty(userArticle.getStatus()) && userArticle.getStatus() == UserArticle.STATUS_PUBLISH) {
+            userArticle.setPublishTime(new Date());
+        }
         userArticleMapper.updateByPrimaryKeySelective(userArticle);
     }
 
     @Override
-    public List<UserArticle> getUserArticle(Integer userId) {
-        return userArticleMapper.selectByWebUserId(userId);
+    public List<UserArticle> getArticlesByWebUserId(Integer userId) {
+        return userArticleMapper.getArticlesByWebUserId(userId);
     }
 
 }

@@ -56,7 +56,9 @@ public class UserArticleServiceImpl implements UserArticleService {
     public static final Integer DEFAULT_DAYS_BEFORE = 1;
     //没有查询到排名结果是往前推的天数
     public static final Integer DEFAULT_DAYS_BEFORE_PLUS = 3;
+
     public static final String QUERY_PARAMETER_TIME = "time";
+
     public static final String QUERY_PARAMETER_CATEGORY_ID = "categoryId";
     //推荐
     public static final String ACTION_TYPE_RECOMMEND = "mostRecommendArticle";
@@ -64,10 +66,13 @@ public class UserArticleServiceImpl implements UserArticleService {
     public static final String ACTION_TYPE_READ = "mostReadArticle";
     //评论
     public static final String ACTION_TYPE_COMMENT = "mostCommentArticle";
+
     @Autowired
     private UserArticleMapper userArticleMapper;
+
     @Autowired
     private WebUserMapper webUserMapper;
+
     @Autowired
     private ArticleCategoryService articleCategoryServiceManager;
 
@@ -242,13 +247,13 @@ public class UserArticleServiceImpl implements UserArticleService {
 
 
     @Override
-    public HomeArticleDTO getArticles(String offset, Integer size, Integer categoryId) {
+    public HomeArticleDTO getMainPageArticles(String offset, Integer size, Integer categoryId) {
         //构建分页对象
         DropDownPage page = new DropDownPage();
         page.setOffset(DateUtils.parse(offset, new Date()));
         page.setSize(size);
-        page.setOrderColumn("update_time");
-        List<UserArticle> list = userArticleMapper.getArticlesByCategoryIdAndPage(page, categoryId);
+        page.setOrderColumn("publish_time");
+        List<UserArticle> list = userArticleMapper.getMainPageArticles(page, categoryId);
 
         List<ArticleDTO> resultList = new ArrayList<ArticleDTO>();
         for (UserArticle userArticle : list) {
@@ -258,7 +263,7 @@ public class UserArticleServiceImpl implements UserArticleService {
             WebUser webUserDto = new WebUser();
             webUserDto.setNickname(webUser.getNickname()); //用户昵称
             articleDTO.setWebUser(webUserDto);
-            articleDTO.setFriendlyTime(DateUtils.toFriendlyTime(userArticle.getUpdateTime()));
+            articleDTO.setFriendlyTime(DateUtils.toFriendlyTime(userArticle.getPublishTime()));
             resultList.add(articleDTO);
         }
 
